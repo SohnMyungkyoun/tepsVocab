@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#183a37" />
+    <title>Vocab Focus</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <div>
+          <p class="eyebrow">VOCAB FOCUS</p>
+          <h1>오늘의 단어</h1>
+        </div>
+        <button id="settings-button" class="icon-button" type="button" aria-label="동기화 설정">⚙</button>
+      </header>
+
+      <section id="progress" class="progress" aria-live="polite"></section>
+      <section id="study" class="study-card" aria-live="polite"></section>
+
+      <p class="hint"><kbd>Space</kbd> 뜻 보기 · <kbd>←</kbd><kbd>→</kbd> 단어 이동</p>
+    </main>
+
+    <dialog id="settings-dialog">
+      <form id="settings-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">OPTIONAL</p>
+            <h2>GitHub 동기화</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="닫기">×</button>
+        </div>
+        <p>연결하면 ‘완벽히 앎’ 표시가 원격 <code>vocab.md</code>에도 기록되어 다른 기기에서도 이어집니다. 토큰은 이 기기의 브라우저에만 저장됩니다.</p>
+        <label>저장소 (예: <code>octocat/vocab</code>)<input id="repo-input" autocomplete="off" placeholder="owner/repository" /></label>
+        <label>Fine-grained Personal Access Token<input id="token-input" type="password" autocomplete="off" placeholder="github_pat_…" /></label>
+        <p class="small">토큰에는 해당 저장소의 Contents: Read and write 권한만 부여하세요.</p>
+        <div class="dialog-actions"><button id="clear-settings" class="secondary" type="button">연결 해제</button><button id="save-settings" value="default">저장</button></div>
+      </form>
+    </dialog>
+
+    <template id="word-template">
+      <article class="word-card">
+        <div class="card-count"></div>
+        <h2 class="word"></h2>
+        <p class="meaning" hidden></p>
+        <div class="actions">
+          <button class="reveal-button" type="button">스페이스바를 눌러 뜻 보기</button>
+          <label class="mastery" hidden><input type="checkbox" /> 완벽히 알아요</label>
+        </div>
+      </article>
+    </template>
+    <script src="app.js"></script>
+  </body>
+</html>
