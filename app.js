@@ -129,7 +129,7 @@ document.querySelector("#restart-button").onclick = () => {
   state.groups = shuffle(state.groups); state.groupIndex = 0; state.wordIndex = 0; state.revealed = false;
   render();
 };
-fetch(DATA_URL).then((response) => response.text()).then((markdown) => {
+fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" }).then((response) => response.text()).then((markdown) => {
   // 이미 아는 단어는 새 학습 회차를 시작할 때만 제외한다.
   const groups = parseVocab(markdown)
     .map((group) => ({ ...group, words: group.words.filter((item) => !item.known && !state.known.has(item.word)) }))
