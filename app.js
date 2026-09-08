@@ -6,12 +6,18 @@ const settings = { repo: localStorage.getItem("vocab-repo") || "", token: localS
 
 function parseVocab(markdown) {
   return markdown.trim().split(/\n\s*\n/).map((block) => ({
-    words: block.split("\n").filter(Boolean).map((line) => {
+    words: block.split("\n").reduce((words, rawLine) => {
+      const line = rawLine.trim();
+      if (!line) return words;
+      if (line.startsWith("예문:")) {
+        if (words.length) words.at(-1).example = line.slice(3).trim();
+        return words;
+      }
       const known = line.includes(KNOWN_TAG);
-      const [word, ...meaningParts] = line.replace(KNOWN_TAG, "").trim().split(/\s+—\s+/);
-      const [meaning, example] = meaningParts.join(" — ").trim().split(/\s*\/\s*예문:\s*/);
-      return { word: word.trim(), meaning: meaning.trim(), example: example?.trim() || "", known };
-    })
+      const [word, ...meaning] = line.replace(KNOWN_TAG, "").trim().split(/\s+—\s+/);
+      words.push({ word: word.trim(), meaning: meaning.join(" — ").trim(), example: "", known });
+      return words;
+    }, [])
   })).map((group) => ({
     ...group,
     id: group.words.map((item) => item.word.toLowerCase()).join("|")
