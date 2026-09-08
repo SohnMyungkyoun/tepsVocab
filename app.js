@@ -15,12 +15,12 @@ function parseVocab(markdown) {
 }
 
 function shuffle(items) { return [...items].sort(() => Math.random() - .5); }
-function activeGroups() { return state.groups.map((group) => ({ ...group, words: group.words.filter((item) => !state.known.has(item.word)) })).filter((group) => group.words.length); }
-function currentGroup() { return activeGroups()[state.groupIndex]; }
+// 학습을 시작한 단락은 그 회차가 끝날 때까지 유지한다. 완료 체크는 다음 실행에서만 반영된다.
+function currentGroup() { return state.groups[state.groupIndex]; }
 function saveKnown() { localStorage.setItem("vocab-known", JSON.stringify([...state.known])); }
 
 function render() {
-  const groups = activeGroups();
+  const groups = state.groups;
   const progress = document.querySelector("#progress");
   const study = document.querySelector("#study");
   if (!groups.length) {
@@ -41,6 +41,7 @@ function render() {
   button.hidden = state.revealed;
   button.onclick = reveal;
   checkbox.onchange = () => markKnown(item.word);
+  checkbox.checked = state.known.has(item.word);
   study.replaceChildren(node);
 }
 
@@ -85,4 +86,10 @@ const dialog = document.querySelector("#settings-dialog");
 document.querySelector("#settings-button").onclick = () => { document.querySelector("#repo-input").value = settings.repo; document.querySelector("#token-input").value = settings.token; dialog.showModal(); };
 document.querySelector("#settings-form").onsubmit = () => { settings.repo = document.querySelector("#repo-input").value.trim(); settings.token = document.querySelector("#token-input").value.trim(); localStorage.setItem("vocab-repo", settings.repo); localStorage.setItem("vocab-token", settings.token); };
 document.querySelector("#clear-settings").onclick = () => { settings.repo = settings.token = ""; localStorage.removeItem("vocab-repo"); localStorage.removeItem("vocab-token"); dialog.close(); };
-fetch(DATA_URL).then((response) => response.text()).then((markdown) => { state.groups = shuffle(parseVocab(markdown)); render(); }).catch(() => { document.querySelector("#study").textContent = "vocab.md를 불러오지 못했습니다."; });
+fetch(DATA_URL).then((response) => response.text()).then((markdown) => {
+  // 이미 아는 단어는 새 학습 회차를 시작할 때만 제외한다.
+  state.groups = shuffle(parseVocab(markdown))
+    .map((group) => ({ ...group, words: group.words.filter((item) => !state.known.has(item.word)) }))
+    .filter((group) => group.words.length);
+  render();
+}).catch(() => { document.querySelector("#study").textContent = "vocab.md를 불러오지 못했습니다."; });
