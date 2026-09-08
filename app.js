@@ -57,7 +57,7 @@ function render() {
   node.querySelector(".card-count").textContent = "뜻을 떠올린 뒤 확인해 보세요";
   node.querySelector(".word").textContent = item.word;
   node.querySelector(".meaning").textContent = item.meaning || "뜻을 vocab.md에 추가해 주세요.";
-  node.querySelector(".example").textContent = item.example ? `“${item.example}”` : "";
+  node.querySelector(".example p").textContent = item.example ? `“${item.example}”` : "";
   const meaning = node.querySelector(".meaning"), example = node.querySelector(".example"), button = node.querySelector(".reveal-button"), mastery = node.querySelector(".mastery"), checkbox = node.querySelector("input");
   meaning.hidden = !state.revealed; example.hidden = !state.revealed || !item.example; mastery.hidden = !state.revealed;
   button.hidden = state.revealed;
