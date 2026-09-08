@@ -16,6 +16,10 @@
         </div>
         <button id="settings-button" class="icon-button" type="button" aria-label="동기화 설정">⚙</button>
       </header>
+      <nav class="session-controls" aria-label="학습 진행 설정">
+        <button id="checkpoint-button" type="button">여기까지</button>
+        <button id="restart-button" type="button">처음부터</button>
+      </nav>
 
       <section id="progress" class="progress" aria-live="polite"></section>
       <section id="study" class="study-card" aria-live="polite"></section>
@@ -45,6 +49,7 @@
         <div class="card-count"></div>
         <div class="word-heading"><h2 class="word"></h2><button class="speak-button" type="button" aria-label="영어 발음 듣기">🔊</button></div>
         <p class="meaning" hidden></p>
+        <p class="example" hidden></p>
         <div class="actions">
           <button class="reveal-button" type="button">스페이스바를 눌러 뜻 보기</button>
           <label class="mastery" hidden><input type="checkbox" /> 완벽히 알아요</label>

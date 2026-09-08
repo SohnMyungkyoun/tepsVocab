@@ -1,16 +1,20 @@
 const DATA_URL = "vocab.md";
 const KNOWN_TAG = "<!-- known -->";
+const CHECKPOINT_KEY = "vocab-checkpoint";
 const state = { groups: [], groupIndex: 0, wordIndex: 0, revealed: false, known: new Set(JSON.parse(localStorage.getItem("vocab-known") || "[]")) };
 const settings = { repo: localStorage.getItem("vocab-repo") || "", token: localStorage.getItem("vocab-token") || "" };
 
 function parseVocab(markdown) {
-  return markdown.trim().split(/\n\s*\n/).map((block, index) => ({
-    id: index,
+  return markdown.trim().split(/\n\s*\n/).map((block) => ({
     words: block.split("\n").filter(Boolean).map((line) => {
       const known = line.includes(KNOWN_TAG);
-      const [word, ...meaning] = line.replace(KNOWN_TAG, "").trim().split(/\s+—\s+/);
-      return { word: word.trim(), meaning: meaning.join(" — ").trim(), known };
+      const [word, ...meaningParts] = line.replace(KNOWN_TAG, "").trim().split(/\s+—\s+/);
+      const [meaning, example] = meaningParts.join(" — ").trim().split(/\s*\/\s*예문:\s*/);
+      return { word: word.trim(), meaning: meaning.trim(), example: example?.trim() || "", known };
     })
+  })).map((group) => ({
+    ...group,
+    id: group.words.map((item) => item.word.toLowerCase()).join("|")
   })).filter((group) => group.words.length);
 }
 
@@ -18,6 +22,23 @@ function shuffle(items) { return [...items].sort(() => Math.random() - .5); }
 // 학습을 시작한 단락은 그 회차가 끝날 때까지 유지한다. 완료 체크는 다음 실행에서만 반영된다.
 function currentGroup() { return state.groups[state.groupIndex]; }
 function saveKnown() { localStorage.setItem("vocab-known", JSON.stringify([...state.known])); }
+function saveCheckpoint() {
+  localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({
+    groupIds: state.groups.map((group) => group.id),
+    groupIndex: state.groupIndex,
+    wordIndex: state.wordIndex
+  }));
+}
+function restoreCheckpoint(groups) {
+  const checkpoint = JSON.parse(localStorage.getItem(CHECKPOINT_KEY) || "null");
+  if (!checkpoint || !Array.isArray(checkpoint.groupIds)) return groups;
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  const restored = checkpoint.groupIds.map((id) => byId.get(id)).filter(Boolean);
+  if (restored.length !== groups.length) { localStorage.removeItem(CHECKPOINT_KEY); return groups; }
+  state.groupIndex = Math.min(checkpoint.groupIndex, restored.length - 1);
+  state.wordIndex = Math.min(checkpoint.wordIndex, restored[state.groupIndex].words.length - 1);
+  return restored;
+}
 
 function render() {
   const groups = state.groups;
@@ -36,8 +57,9 @@ function render() {
   node.querySelector(".card-count").textContent = "뜻을 떠올린 뒤 확인해 보세요";
   node.querySelector(".word").textContent = item.word;
   node.querySelector(".meaning").textContent = item.meaning || "뜻을 vocab.md에 추가해 주세요.";
-  const meaning = node.querySelector(".meaning"), button = node.querySelector(".reveal-button"), mastery = node.querySelector(".mastery"), checkbox = node.querySelector("input");
-  meaning.hidden = !state.revealed; mastery.hidden = !state.revealed;
+  node.querySelector(".example").textContent = item.example ? `“${item.example}”` : "";
+  const meaning = node.querySelector(".meaning"), example = node.querySelector(".example"), button = node.querySelector(".reveal-button"), mastery = node.querySelector(".mastery"), checkbox = node.querySelector("input");
+  meaning.hidden = !state.revealed; example.hidden = !state.revealed || !item.example; mastery.hidden = !state.revealed;
   button.hidden = state.revealed;
   button.onclick = reveal;
   node.querySelector(".speak-button").onclick = () => speak(item.word);
@@ -64,7 +86,7 @@ function previousWord() { if (state.wordIndex > 0) { state.wordIndex--; state.re
 function showSummary(group) {
   document.querySelector("#progress").textContent = "단락 복습";
   const study = document.querySelector("#study");
-  study.innerHTML = `<section class="summary"><p class="eyebrow">GROUP REVIEW</p><h2>비슷한 단어를 함께 비교하세요</h2><div class="summary-list">${group.words.map((item) => `<div class="summary-item"><strong>${escapeHtml(item.word)}</strong><span>${escapeHtml(item.meaning)}</span></div>`).join("")}</div><button class="reveal-button next-group" type="button">다음 단락</button></section>`;
+  study.innerHTML = `<section class="summary"><p class="eyebrow">GROUP REVIEW</p><h2>비슷한 단어를 함께 비교하세요</h2><div class="summary-list">${group.words.map((item) => `<div class="summary-item"><strong>${escapeHtml(item.word)}</strong><span>${escapeHtml(item.meaning)}</span>${item.example ? `<p class="summary-example">“${escapeHtml(item.example)}”</p>` : ""}</div>`).join("")}</div><button class="reveal-button next-group" type="button">다음 단락</button></section>`;
   study.querySelector("button").onclick = () => { state.groupIndex++; state.wordIndex = 0; state.revealed = false; render(); };
 }
 function escapeHtml(text) { return text.replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" })[char]); }
@@ -95,10 +117,17 @@ const dialog = document.querySelector("#settings-dialog");
 document.querySelector("#settings-button").onclick = () => { document.querySelector("#repo-input").value = settings.repo; document.querySelector("#token-input").value = settings.token; dialog.showModal(); };
 document.querySelector("#settings-form").onsubmit = () => { settings.repo = document.querySelector("#repo-input").value.trim(); settings.token = document.querySelector("#token-input").value.trim(); localStorage.setItem("vocab-repo", settings.repo); localStorage.setItem("vocab-token", settings.token); };
 document.querySelector("#clear-settings").onclick = () => { settings.repo = settings.token = ""; localStorage.removeItem("vocab-repo"); localStorage.removeItem("vocab-token"); dialog.close(); };
+document.querySelector("#checkpoint-button").onclick = () => { saveCheckpoint(); alert("여기까지 저장했습니다. 다음에 이 단어부터 이어서 학습합니다."); };
+document.querySelector("#restart-button").onclick = () => {
+  localStorage.removeItem(CHECKPOINT_KEY);
+  state.groups = shuffle(state.groups); state.groupIndex = 0; state.wordIndex = 0; state.revealed = false;
+  render();
+};
 fetch(DATA_URL).then((response) => response.text()).then((markdown) => {
   // 이미 아는 단어는 새 학습 회차를 시작할 때만 제외한다.
-  state.groups = shuffle(parseVocab(markdown))
-    .map((group) => ({ ...group, words: group.words.filter((item) => !state.known.has(item.word)) }))
+  const groups = parseVocab(markdown)
+    .map((group) => ({ ...group, words: group.words.filter((item) => !item.known && !state.known.has(item.word)) }))
     .filter((group) => group.words.length);
+  state.groups = restoreCheckpoint(shuffle(groups));
   render();
 }).catch(() => { document.querySelector("#study").textContent = "vocab.md를 불러오지 못했습니다."; });
