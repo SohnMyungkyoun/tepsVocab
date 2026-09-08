@@ -40,12 +40,21 @@ function render() {
   meaning.hidden = !state.revealed; mastery.hidden = !state.revealed;
   button.hidden = state.revealed;
   button.onclick = reveal;
+  node.querySelector(".speak-button").onclick = () => speak(item.word);
   checkbox.onchange = () => markKnown(item.word);
   checkbox.checked = state.known.has(item.word);
   study.replaceChildren(node);
 }
 
 function reveal() { state.revealed = true; render(); }
+function speak(word) {
+  if (!("speechSynthesis" in window)) { alert("이 브라우저는 음성 재생을 지원하지 않습니다."); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = "en-US";
+  utterance.rate = 0.8;
+  window.speechSynthesis.speak(utterance);
+}
 function nextWord() {
   const group = currentGroup(); if (!group) return;
   if (state.wordIndex < group.words.length - 1) { state.wordIndex++; state.revealed = false; render(); }
